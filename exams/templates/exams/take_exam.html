@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="card" style="padding: 24px; margin-bottom: 24px; background: var(--primary); color: white;">
+        <h2 style="margin: 0;">{{ exam.title }}</h2>
+        <p style="margin: 8px 0 0 0; opacity: 0.9;">Duration: {{ exam.duration_minutes }} minutes | Total Questions: {{ questions.count }}</p>
+    </div>
+
+    {% if already_taken %}
+        <div class="card" style="padding: 32px; text-align: center;">
+            <h3 style="color: var(--danger);">You have already taken this exam.</h3>
+            <p>You cannot retake an exam.</p>
+            <a href="{% url 'dashboard' %}" class="btn btn-primary" style="margin-top: 16px;">Back to Dashboard</a>
+        </div>
+    {% else %}
+        <form method="POST">
+            {% csrf_token %}
+            {% for q in questions %}
+                <div class="card" style="padding: 20px; margin-bottom: 16px;">
+                    <h4 style="margin-top: 0;">{{ forloop.counter }}. {{ q.text }} <span style="color: var(--muted); font-size: 0.85rem;">({{ q.points }} pts)</span></h4>
+                    
+                    {% for choice in q.choices.all %}
+                        <label style="display: block; padding: 10px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; cursor: pointer;">
+                            <input type="radio" name="question_{{ q.id }}" value="{{ choice.id }}" required>
+                            {{ choice.text }}
+                        </label>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            
+            <div style="text-align: right; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary" style="font-size: 1.1rem; padding: 12px 24px;">Submit Exam</button>
+            </div>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}

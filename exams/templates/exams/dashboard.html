@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <h2>Dashboard</h2>
+    {% if user.is_staff %}
+        <a href="{% url 'exam_create' %}" class="btn btn-primary">+ Create New Exam</a>
+    {% endif %}
+</div>
+
+{% if user.is_staff %}
+    <h3 style="color: var(--muted); font-size: 1.1rem; margin-bottom: 16px;">Exams You Manage</h3>
+{% else %}
+    <h3 style="color: var(--muted); font-size: 1.1rem; margin-bottom: 16px;">Available Exams</h3>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+    {% for exam in exams %}
+        <div class="card" style="padding: 20px;">
+            <h3 style="margin-top: 0;">{{ exam.title }}</h3>
+            <p style="color: var(--muted); font-size: 0.9rem;">{{ exam.description|default:"No description." }}</p>
+            <p style="font-size: 0.85rem;">⏱️ {{ exam.duration_minutes }} mins | 📝 {{ exam.questions.count }} Questions</p>
+            
+            <div style="margin-top: 16px;">
+                {% if user.is_staff %}
+                    <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-ghost btn-sm">Manage Questions</a>
+                {% else %}
+                    <a href="{% url 'take_exam' exam.pk %}" class="btn btn-primary btn-sm">Take Exam</a>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="card" style="padding: 40px; text-align: center; grid-column: 1 / -1;">
+            <p style="color: var(--muted);">No exams available yet.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

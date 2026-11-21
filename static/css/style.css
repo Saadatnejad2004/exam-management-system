@@ -1,0 +1,39 @@
+.auth-container {
+    max-width: 400px;
+    margin: 80px auto;
+    background: white;
+    padding: 32px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.auth-container h2 { margin-top: 0; text-align: center; }
+.auth-container p { text-align: center; margin-top: 16px; font-size: 0.9rem; }
+.helptext { font-size: 0.75rem; color: #6b7280; display: block; margin-top: 4px; }
+
+.choice-list {
+    margin: 10px 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+}
+.choice-correct {
+    color: var(--success);
+}
+.choice-normal {
+    color: var(--muted);
+}
+.choice-error {
+    color: var(--danger);
+    list-style-type: none;
+}
+
+.result-score {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+.score-pass {
+    color: var(--success);
+}
+.score-fail {
+    color: var(--danger);
+}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <h2>Create Exam</h2>
+    <div class="card" style="padding: 24px; margin-top: 16px;">
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <div style="display: flex; gap: 10px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Save & Add Questions</button>
+                <a href="{% url 'dashboard' %}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 600px; margin: 60px auto; text-align: center;">
+    <div class="card" style="padding: 40px;">
+        <h2>Exam Completed!</h2>
+        <p style="color: var(--muted); font-size: 1.1rem; margin-bottom: 24px;">{{ attempt.exam.title }}</p>
+        
+        <!-- Dynamically assign the CSS class based on the score -->
+        <div class="result-score {% if percentage >= 50 %}score-pass{% else %}score-fail{% endif %}">
+            {{ percentage }}%
+        </div>
+        
+        <p style="font-size: 1.2rem;">Score: <strong>{{ attempt.score }}</strong> / {{ attempt.total_points }}</p>
+        
+        <a href="{% url 'dashboard' %}" class="btn btn-primary" style="margin-top: 24px;">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
