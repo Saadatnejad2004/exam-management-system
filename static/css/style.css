@@ -37,3 +37,7 @@
 .score-fail {
     color: var(--danger);
 }
+.report-score {
+    font-size: 2rem;
+    margin: 8px 0;
+}

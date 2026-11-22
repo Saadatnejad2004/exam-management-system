@@ -6,6 +6,7 @@ from django.views.generic import TemplateView, CreateView
 from django.urls import reverse_lazy
 from .forms import UserRegisterForm, ExamForm, QuestionForm, ChoiceForm
 from .models import Exam, Question, Choice, ExamAttempt, StudentAnswer
+from django.db.models import Avg
 
 # ============ AUTHENTICATION ============
 
@@ -186,4 +187,28 @@ class ExamResultView(LoginRequiredMixin, TemplateView):
             context['percentage'] = round((attempt.score / attempt.total_points) * 100, 1)
         else:
             context['percentage'] = 0
+        return context
+
+
+class ExamReportView(TeacherRequiredMixin, TemplateView):
+    template_name = 'exams/exam_report.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        exam = get_object_or_404(Exam, pk=self.kwargs['pk'], created_by=self.request.user)
+        
+        # Fetch all attempts for this exam
+        attempts = ExamAttempt.objects.filter(exam=exam).select_related('user').order_by('-completed_at')
+        
+        # Calculate average score percentage using Python (since total_points can vary per attempt, but usually it's the same)
+        total_percentage = 0
+        for attempt in attempts:
+            if attempt.total_points > 0:
+                total_percentage += (attempt.score / attempt.total_points) * 100
+        
+        avg_score = round(total_percentage / attempts.count(), 1) if attempts.exists() else 0
+
+        context['exam'] = exam
+        context['attempts'] = attempts
+        context['avg_score'] = avg_score
         return context

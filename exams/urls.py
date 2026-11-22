@@ -19,4 +19,7 @@ urlpatterns = [
     # Student: Take & Submit Exam
     path('exam/<int:pk>/take/', views.TakeExamView.as_view(), name='take_exam'),
     path('result/<int:pk>/', views.ExamResultView.as_view(), name='exam_result'),
+
+    # Teacher: Exam Report
+    path('exam/<int:pk>/report/', views.ExamReportView.as_view(), name='exam_report'),
 ]
