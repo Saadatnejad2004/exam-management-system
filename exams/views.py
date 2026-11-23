@@ -4,7 +4,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import TemplateView, CreateView
 from django.urls import reverse_lazy
-from .forms import UserRegisterForm, ExamForm, QuestionForm, ChoiceForm
+from .forms import UserRegisterForm, ExamForm, QuestionForm, ChoiceForm, CustomLoginForm
 from .models import Exam, Question, Choice, ExamAttempt, StudentAnswer
 from django.db.models import Avg
 
@@ -12,6 +12,7 @@ from django.db.models import Avg
 
 class CustomLoginView(LoginView):
     template_name = 'exams/login.html'
+    authentication_form = CustomLoginForm
 
 class CustomLogoutView(LogoutView):
     next_page = 'login'
