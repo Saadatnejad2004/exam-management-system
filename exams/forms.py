@@ -50,9 +50,9 @@ class ExamForm(forms.ModelForm):
         model = Exam
         fields = ['title', 'description', 'duration_minutes']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'input', 'placeholder': 'e.g., Midterm Exam'}),
-            'description': forms.Textarea(attrs={'class': 'input', 'rows': 3, 'placeholder': 'Optional description...'}),
-            'duration_minutes': forms.NumberInput(attrs={'class': 'input'}),
+            'title': forms.TextInput(attrs={'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none', 'placeholder': 'e.g., Midterm Exam'}),
+            'description': forms.Textarea(attrs={'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none', 'rows': 3, 'placeholder': 'Optional description...'}),
+            'duration_minutes': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none'}),
         }
 
 class QuestionForm(forms.ModelForm):
@@ -60,8 +60,8 @@ class QuestionForm(forms.ModelForm):
         model = Question
         fields = ['text', 'points']
         widgets = {
-            'text': forms.Textarea(attrs={'class': 'input', 'rows': 3, 'placeholder': 'Enter the question...'}),
-            'points': forms.NumberInput(attrs={'class': 'input'}),
+            'text': forms.Textarea(attrs={'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none', 'rows': 3, 'placeholder': 'Enter the question...'}),
+            'points': forms.NumberInput(attrs={'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none'}),
         }
 
 class ChoiceForm(forms.ModelForm):
@@ -69,5 +69,6 @@ class ChoiceForm(forms.ModelForm):
         model = Choice
         fields = ['text', 'is_correct']
         widgets = {
-            'text': forms.TextInput(attrs={'class': 'input', 'placeholder': 'e.g., Option A'}),
+            'text': forms.TextInput(attrs={'class': 'w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none', 'placeholder': 'e.g., Option A'}),
+            'is_correct': forms.CheckboxInput(attrs={'class': 'w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500'}),
         }

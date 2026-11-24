@@ -1,35 +1,49 @@
 {% extends 'base.html' %}
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto;">
-    <div class="card" style="padding: 24px; margin-bottom: 24px; background: var(--primary); color: white;">
-        <h2 style="margin: 0;">{{ exam.title }}</h2>
-        <p style="margin: 8px 0 0 0; opacity: 0.9;">Duration: {{ exam.duration_minutes }} minutes | Total Questions: {{ questions.count }}</p>
+<div class="max-w-3xl mx-auto">
+    <!-- Header -->
+    <div class="bg-indigo-600 rounded-2xl p-8 text-white shadow-md mb-8">
+        <h1 class="text-3xl font-bold mb-2">{{ exam.title }}</h1>
+        <div class="flex gap-6 text-indigo-100 text-sm font-medium">
+            <span class="flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> {{ exam.duration_minutes }} Minutes</span>
+            <span class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4"></i> {{ questions.count }} Questions</span>
+        </div>
     </div>
 
     {% if already_taken %}
-        <div class="card" style="padding: 32px; text-align: center;">
-            <h3 style="color: var(--danger);">You have already taken this exam.</h3>
-            <p>You cannot retake an exam.</p>
-            <a href="{% url 'dashboard' %}" class="btn btn-primary" style="margin-top: 16px;">Back to Dashboard</a>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+                <i data-lucide="alert-circle" class="w-8 h-8 text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">You have already taken this exam.</h3>
+            <p class="text-gray-500 mb-6">You cannot retake an exam.</p>
+            <a href="{% url 'dashboard' %}" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition">Back to Dashboard</a>
         </div>
     {% else %}
-        <form method="POST">
+        <form method="POST" class="space-y-6">
             {% csrf_token %}
             {% for q in questions %}
-                <div class="card" style="padding: 20px; margin-bottom: 16px;">
-                    <h4 style="margin-top: 0;">{{ forloop.counter }}. {{ q.text }} <span style="color: var(--muted); font-size: 0.85rem;">({{ q.points }} pts)</span></h4>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">
+                        {{ forloop.counter }}. {{ q.text }} 
+                        <span class="text-sm font-normal text-gray-400 ml-2">({{ q.points }} pts)</span>
+                    </h4>
                     
-                    {% for choice in q.choices.all %}
-                        <label style="display: block; padding: 10px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; cursor: pointer;">
-                            <input type="radio" name="question_{{ q.id }}" value="{{ choice.id }}" required>
-                            {{ choice.text }}
-                        </label>
-                    {% endfor %}
+                    <div class="space-y-3">
+                        {% for choice in q.choices.all %}
+                            <label class="flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                                <input type="radio" name="question_{{ q.id }}" value="{{ choice.id }}" required class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                                <span class="ml-3 text-gray-700">{{ choice.text }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
                 </div>
             {% endfor %}
             
-            <div style="text-align: right; margin-top: 24px;">
-                <button type="submit" class="btn btn-primary" style="font-size: 1.1rem; padding: 12px 24px;">Submit Exam</button>
+            <div class="flex justify-end pt-4 pb-12">
+                <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition shadow-md">
+                    Submit Exam
+                </button>
             </div>
         </form>
     {% endif %}

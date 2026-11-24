@@ -1,14 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
-<div style="max-width: 600px; margin: 0 auto;">
-    <h2>Add Choice for: "{{ question.text }}"</h2>
-    <div class="card" style="padding: 24px; margin-top: 16px;">
-        <form method="POST">
+<div class="max-w-lg mx-auto mt-10">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <div class="mb-6">
+            <h2 class="text-xl font-bold text-gray-900">Add Choice</h2>
+            <p class="text-gray-500 text-sm mt-1">Question: "{{ question.text }}"</p>
+        </div>
+        
+        <form method="POST" class="space-y-5">
             {% csrf_token %}
-            {{ form.as_p }}
-            <div style="display: flex; gap: 10px; margin-top: 24px;">
-                <button type="submit" class="btn btn-primary">Save Choice</button>
-                <a href="{% url 'exam_detail' question.exam.pk %}" class="btn btn-ghost">Done</a>
+            {% for field in form %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+            {% endfor %}
+
+            <div class="flex items-center gap-4 pt-4">
+                <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition">
+                    Save Choice
+                </button>
+                <a href="{% url 'exam_detail' question.exam.pk %}" class="text-gray-500 hover:text-gray-700 font-medium">Done</a>
             </div>
         </form>
     </div>

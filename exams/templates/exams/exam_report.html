@@ -1,45 +1,51 @@
 {% extends 'base.html' %}
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+<div class="flex justify-between items-center mb-8">
     <div>
-        <h2>Reports: {{ exam.title }}</h2>
-        <p style="color: var(--muted);">Total Attempts: {{ attempts.count }}</p>
+        <h2 class="text-2xl font-bold text-gray-900">Reports: {{ exam.title }}</h2>
+        <p class="text-gray-500 text-sm mt-1">Total Attempts: {{ attempts.count }}</p>
     </div>
-    <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-ghost">&larr; Back to Exam</a>
+    <a href="{% url 'exam_detail' exam.pk %}" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition">
+        &larr; Back to Exam
+    </a>
 </div>
 
-<div class="card" style="padding: 20px; margin-bottom: 24px; display: flex; gap: 40px;">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8 flex items-center justify-between">
     <div>
-        <p style="color: var(--muted); font-size: 0.85rem; font-weight: 600; margin: 0;">CLASS AVERAGE</p>
-        <h3 class="report-score {% if avg_score >= 50 %}score-pass{% else %}score-fail{% endif %}">
+        <p class="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-1">Class Average</p>
+        <h3 class="text-4xl font-extrabold {% if avg_score >= 50 %}text-green-500{% else %}text-red-500{% endif %}">
             {{ avg_score }}%
         </h3>
     </div>
+    <div class="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center">
+        <i data-lucide="pie-chart" class="w-8 h-8 text-indigo-600"></i>
+    </div>
 </div>
 
-<div class="card">
-    <table class="table">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <table class="w-full text-left border-collapse">
         <thead>
-            <tr>
-                <th>Student</th>
-                <th>Date Taken</th>
-                <th>Score</th>
-                <th>Percentage</th>
+            <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th class="px-6 py-4">Student</th>
+                <th class="px-6 py-4">Date Taken</th>
+                <th class="px-6 py-4">Score</th>
+                <th class="px-6 py-4 text-right">Percentage</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-gray-100">
             {% for attempt in attempts %}
-            <tr>
-                <td><strong>{{ attempt.user.username }}</strong></td>
-                <td>{{ attempt.completed_at|date:"M d, Y H:i" }}</td>
-                <td>{{ attempt.score }} / {{ attempt.total_points }}</td>
-                <td>
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4 font-medium text-gray-900">{{ attempt.user.username }}</td>
+                <td class="px-6 py-4 text-gray-500 text-sm">{{ attempt.completed_at|date:"M d, Y H:i" }}</td>
+                <td class="px-6 py-4 text-gray-700">{{ attempt.score }} / {{ attempt.total_points }}</td>
+                <td class="px-6 py-4 text-right font-bold text-gray-900">
                     {% widthratio attempt.score attempt.total_points 100 %}%
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" style="text-align: center; padding: 32px; color: var(--muted);">
+                <td colspan="4" class="px-6 py-12 text-center text-gray-500">
+                    <i data-lucide="users" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
                     No students have taken this exam yet.
                 </td>
             </tr>

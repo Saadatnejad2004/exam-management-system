@@ -1,52 +1,71 @@
 {% extends 'base.html' %}
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+<div class="flex justify-between items-center mb-8">
     <div>
-        <h2>{{ exam.title }}</h2>
-        <p style="color: var(--muted);">Duration: {{ exam.duration_minutes }} minutes</p>
+        <h2 class="text-2xl font-bold text-gray-900">{{ exam.title }}</h2>
+        <p class="text-gray-500 text-sm mt-1">Duration: {{ exam.duration_minutes }} minutes | Total Questions: {{ questions.count }}</p>
     </div>
-    <a href="{% url 'exam_report' exam.pk %}" class="btn btn-primary" style="margin-right: 10px;">View Student Reports</a>
-    <a href="{% url 'dashboard' %}" class="btn btn-ghost">&larr; Back to Dashboard</a>
+    <div class="flex gap-3">
+        <a href="{% url 'exam_report' exam.pk %}" class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-lg font-medium hover:bg-indigo-100 transition flex items-center gap-2">
+            <i data-lucide="bar-chart-2" class="w-4 h-4"></i> View Reports
+        </a>
+        <a href="{% url 'dashboard' %}" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition">
+            &larr; Dashboard
+        </a>
+    </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-    <!-- Existing Questions -->
-    <div>
-        <h3>Questions ({{ questions.count }})</h3>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Left Side: Questions List -->
+    <div class="lg:col-span-2 space-y-4">
         {% for q in questions %}
-            <div class="card" style="padding: 16px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between;">
-                    <strong>Q{{ forloop.counter }}: {{ q.text }}</strong> 
-                    <span style="font-size: 0.8rem; background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">{{ q.points }} pts</span>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Q{{ forloop.counter }}: {{ q.text }}</h3>
+                    <span class="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">{{ q.points }} pts</span>
                 </div>
                 
-                <!-- Show existing choices -->
-                <ul class="choice-list">
+                <div class="space-y-2 mb-4">
                     {% for choice in q.choices.all %}
-                        <!-- Using a CSS class instead of inline styling -->
-                        <li class="{% if choice.is_correct %}choice-correct{% else %}choice-normal{% endif %}">
-                            {{ choice.text }} {% if choice.is_correct %}<strong>(Correct)</strong>{% endif %}
-                        </li>
+                        <div class="flex items-center p-2 rounded-lg {% if choice.is_correct %}bg-green-50 border border-green-200{% else %}bg-gray-50 border border-gray-100{% endif %}">
+                            <div class="w-4 h-4 rounded-full border border-gray-300 mr-3 flex items-center justify-center {% if choice.is_correct %}bg-green-500 border-green-500{% endif %}">
+                                {% if choice.is_correct %}<i data-lucide="check" class="w-3 h-3 text-white"></i>{% endif %}
+                            </div>
+                            <span class="text-sm {% if choice.is_correct %}text-green-700 font-medium{% else %}text-gray-600{% endif %}">{{ choice.text }}</span>
+                        </div>
                     {% empty %}
-                        <li class="choice-error">No choices added yet!</li>
+                        <p class="text-red-500 text-sm italic">No choices added yet!</p>
                     {% endfor %}
-                </ul>
+                </div>
                 
-                <a href="{% url 'choice_create' q.pk %}" class="btn btn-ghost btn-sm">+ Add Choice</a>
+                <a href="{% url 'choice_create' q.pk %}" class="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add Choice
+                </a>
             </div>
         {% empty %}
-            <p style="color: var(--muted);">No questions added yet.</p>
+            <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+                <p class="text-gray-500">No questions added yet. Use the form to create your first question.</p>
+            </div>
         {% endfor %}
     </div>
 
-    <!-- Add Question Form -->
-    <div class="card" style="padding: 24px; height: fit-content;">
-        <h3>Add Question</h3>
-        <form method="POST" action="{% url 'question_create' exam.pk %}">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Add Question</button>
-        </form>
+    <!-- Right Side: Add Question Form -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-24">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Add Question</h3>
+            <form method="POST" action="{% url 'question_create' exam.pk %}" class="space-y-4">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition">
+                    Add Question
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

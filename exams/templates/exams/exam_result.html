@@ -1,18 +1,28 @@
 {% extends 'base.html' %}
 {% block content %}
-<div style="max-width: 600px; margin: 60px auto; text-align: center;">
-    <div class="card" style="padding: 40px;">
-        <h2>Exam Completed!</h2>
-        <p style="color: var(--muted); font-size: 1.1rem; margin-bottom: 24px;">{{ attempt.exam.title }}</p>
-        
-        <!-- Dynamically assign the CSS class based on the score -->
-        <div class="result-score {% if percentage >= 50 %}score-pass{% else %}score-fail{% endif %}">
-            {{ percentage }}%
+<div class="max-w-xl mx-auto mt-16">
+    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden text-center">
+        <div class="p-10">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full {% if percentage >= 50 %}bg-green-100{% else %}bg-red-100{% endif %} mb-6">
+                {% if percentage >= 50 %}
+                    <i data-lucide="award" class="w-10 h-10 text-green-600"></i>
+                {% else %}
+                    <i data-lucide="x-circle" class="w-10 h-10 text-red-600"></i>
+                {% endif %}
+            </div>
+            
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Exam Completed!</h2>
+            <p class="text-gray-500 mb-8">{{ attempt.exam.title }}</p>
+            
+            <div class="text-6xl font-extrabold {% if percentage >= 50 %}text-green-500{% else %}text-red-500{% endif %} mb-2">
+                {{ percentage }}%
+            </div>
+            <p class="text-lg text-gray-600 mb-8">Score: <span class="font-bold">{{ attempt.score }}</span> / {{ attempt.total_points }}</p>
+            
+            <a href="{% url 'dashboard' %}" class="inline-block bg-gray-900 text-white px-8 py-3 rounded-xl font-medium hover:bg-gray-800 transition">
+                Return to Dashboard
+            </a>
         </div>
-        
-        <p style="font-size: 1.2rem;">Score: <strong>{{ attempt.score }}</strong> / {{ attempt.total_points }}</p>
-        
-        <a href="{% url 'dashboard' %}" class="btn btn-primary" style="margin-top: 24px;">Back to Dashboard</a>
     </div>
 </div>
 {% endblock %}
