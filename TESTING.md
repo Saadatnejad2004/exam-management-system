@@ -1,29 +1,33 @@
-# Security & Testing Report — Online Exam System
+# Automated and Manual Testing
 
-## Step 5: System Security Audit
+## Automated tests
 
-Django provides robust, out-of-the-box security. Below is the evidence of how this system defends against common attacks.
+Run the test suite with:
 
-### 1. Cross-Site Scripting (XSS)
-**Test:** Try to create an Exam titled `<script>alert('XSS')</script>`.
-**Result:** Django's template engine automatically escapes HTML characters. The script is rendered as plain text, not executed. **PASS**
+```bash
+python manage.py test
+```
 
-### 2. Cross-Site Request Forgery (CSRF)
-**Test:** Remove the `{% csrf_token %}` from any form in `take_exam.html` and submit an exam.
-**Result:** Django blocks the request with a `403 Forbidden` error. Every POST request requires a valid, session-bound CSRF token. **PASS**
+The automated suite covers:
+- Public registration cannot grant teacher privileges.
+- Teachers can only manage their own exams, questions, choices, and reports.
+- Students cannot open teacher management screens or take exams using a teacher account.
+- Exam duration validation.
+- An attempt is created once and its start time survives refreshes.
+- Correct answer grading and one-attempt enforcement.
+- Server-side expiration rejects late answers.
+- Choices belonging to another question are ignored.
+- Database uniqueness prevents duplicate answers for one question in an attempt.
 
-### 3. SQL Injection
-**Test:** In the login field, enter `' OR 1=1 --` as the username.
-**Result:** The Django ORM uses parameterized queries. The input is treated as a literal string, not executable SQL. The login fails safely. **PASS**
+## Manual smoke test
 
-### 4. Broken Access Control (Route Protection)
-**Test:** Log in as a Student, then manually navigate to `/exam/create/`.
-**Result:** The `TeacherRequiredMixin` (`UserPassesTestMixin`) intercepts the request and returns a `403 Forbidden`. Students cannot create exams. **PASS**
+1. Create a teacher using `createsuperuser` or promote a user through Django admin (`is_staff=True`).
+2. Create an exam with a duration of at least one minute.
+3. Add questions and choices, marking the correct choice for each question.
+4. Register a normal student account and start the exam.
+5. Refresh the exam page and confirm the countdown continues from the original start time.
+6. Submit before the deadline and verify the result and teacher report.
+7. Start another attempt and wait for the deadline; verify late answers are rejected.
+8. Log in as a different teacher and confirm the first teacher's exam cannot be managed or reported.
 
-### 5. Examination Integrity (Anti-Cheat)
-**Test:** Take an exam, complete it, then manually navigate to `/exam/1/take/` again.
-**Result:** The `TakeExamView` checks for an existing `ExamAttempt`. The student is blocked from re-taking the exam and sees a warning message. **PASS**
-
-### 6. Password Security
-**Test:** Register a user, then log into `/admin/` and inspect the `auth_user` table.
-**Result:** Passwords are hashed using PBKDF2 with a SHA256 hash and a random salt. Plain-text passwords are never stored. **PASS**
+Automated tests have not been executed in this delivery environment because Django dependencies could not be installed (network access to the package index was unavailable). Python syntax compilation was completed successfully.

@@ -1,215 +1,241 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic import TemplateView, CreateView
+from django.contrib.auth.views import LoginView, LogoutView
+from django.db import IntegrityError, transaction
+from django.http import HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from .forms import UserRegisterForm, ExamForm, QuestionForm, ChoiceForm, CustomLoginForm
-from .models import Exam, Question, Choice, ExamAttempt, StudentAnswer
-from django.db.models import Avg
+from django.utils import timezone
+from django.views.generic import CreateView, TemplateView
 
-# ============ AUTHENTICATION ============
+from .forms import ChoiceForm, CustomLoginForm, ExamForm, QuestionForm, UserRegisterForm
+from .models import Choice, Exam, ExamAttempt, Question, StudentAnswer
+
 
 class CustomLoginView(LoginView):
-    template_name = 'exams/login.html'
+    template_name = "exams/login.html"
     authentication_form = CustomLoginForm
 
+
 class CustomLogoutView(LogoutView):
-    next_page = 'login'
+    next_page = "login"
+
 
 def register(request):
+    """Public registration always creates a student; staff promotion is admin-only."""
     if request.user.is_authenticated:
-        return redirect('dashboard')
-        
-    if request.method == 'POST':
-        form = UserRegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            if form.cleaned_data.get('is_teacher'):
-                user.is_staff = True
-            user.save()
-            login(request, user)
-            return redirect('dashboard')
-    else:
-        form = UserRegisterForm()
-    return render(request, 'exams/register.html', {'form': form})
+        return redirect("dashboard")
+    form = UserRegisterForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save(commit=False)
+        user.is_staff = False
+        user.is_superuser = False
+        user.save()
+        login(request, user)
+        return redirect("dashboard")
+    return render(request, "exams/register.html", {"form": form})
 
-# ============ DASHBOARD & TEACHER MODULES ============
 
 class DashboardView(LoginRequiredMixin, TemplateView):
-    template_name = 'exams/dashboard.html'
+    template_name = "exams/dashboard.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.request.user.is_staff:
-            # Teacher sees exams they created
-            context['exams'] = Exam.objects.filter(created_by=self.request.user).order_by('-created_at')
+            context["exams"] = Exam.objects.filter(created_by=self.request.user).order_by("-created_at")
         else:
-            # Student sees all available exams (we'll add taking exams in Phase C)
-            context['exams'] = Exam.objects.all().order_by('-created_at')
+            context["exams"] = Exam.objects.all().order_by("-created_at")
         return context
 
-class TeacherRequiredMixin(UserPassesTestMixin):
-    """Restricts access to Teachers only."""
+
+class TeacherRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Restricts access to staff users; ownership is checked per object as well."""
     def test_func(self):
         return self.request.user.is_staff
+
 
 class ExamCreateView(TeacherRequiredMixin, CreateView):
     model = Exam
     form_class = ExamForm
-    template_name = 'exams/exam_form.html'
+    template_name = "exams/exam_form.html"
 
     def form_valid(self, form):
-        # Assign the currently logged-in teacher as the creator
         form.instance.created_by = self.request.user
         return super().form_valid(form)
 
     def get_success_url(self):
-        # After creating an exam, go add questions to it
-        return reverse_lazy('exam_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy("exam_detail", kwargs={"pk": self.object.pk})
+
 
 class QuestionCreateView(TeacherRequiredMixin, CreateView):
     model = Question
     form_class = QuestionForm
-    template_name = 'exams/question_form.html'
+    template_name = "exams/question_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        self.exam = get_object_or_404(Exam, pk=kwargs["pk"], created_by=request.user)
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        # Link the question to the exam from the URL
-        exam = get_object_or_404(Exam, pk=self.kwargs['pk'])
-        form.instance.exam = exam
+        form.instance.exam = self.exam
         return super().form_valid(form)
 
     def get_success_url(self):
-        # Stay on the same page to add another question
-        return reverse_lazy('exam_detail', kwargs={'pk': self.kwargs['pk']})
+        return reverse_lazy("exam_detail", kwargs={"pk": self.exam.pk})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['exam'] = get_object_or_404(Exam, pk=self.kwargs['pk'])
+        context["exam"] = self.exam
         return context
+
 
 class ExamDetailView(LoginRequiredMixin, TemplateView):
-    template_name = 'exams/exam_detail.html'
+    template_name = "exams/exam_detail.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        self.exam = get_object_or_404(Exam, pk=kwargs["pk"])
+        if not request.user.is_staff or self.exam.created_by_id != request.user.pk:
+            return HttpResponseForbidden("You do not have permission to manage this exam.")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        exam = get_object_or_404(Exam, pk=self.kwargs['pk'])
-        context['exam'] = exam
-        context['questions'] = exam.questions.all()
-        context['form'] = QuestionForm()
+        context["exam"] = self.exam
+        context["questions"] = self.exam.questions.prefetch_related("choices").all()
+        context["form"] = QuestionForm()
         return context
 
-# ============ TEACHER: ADD CHOICES ============
 
 class ChoiceCreateView(TeacherRequiredMixin, CreateView):
     model = Choice
     form_class = ChoiceForm
-    template_name = 'exams/choice_form.html'
+    template_name = "exams/choice_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        self.question = get_object_or_404(
+            Question.objects.select_related("exam"),
+            pk=kwargs["question_pk"],
+            exam__created_by=request.user,
+        )
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        question = get_object_or_404(Question, pk=self.kwargs['question_pk'])
-        form.instance.question = question
+        form.instance.question = self.question
         return super().form_valid(form)
 
     def get_success_url(self):
-        # After adding a choice, go back to the exam detail page
-        question = get_object_or_404(Question, pk=self.kwargs['question_pk'])
-        return reverse_lazy('exam_detail', kwargs={'pk': question.exam.pk})
+        return reverse_lazy("exam_detail", kwargs={"pk": self.question.exam_id})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['question'] = get_object_or_404(Question, pk=self.kwargs['question_pk'])
+        context["question"] = self.question
         return context
 
-# ============ STUDENT: TAKE EXAM ============
 
 class TakeExamView(LoginRequiredMixin, TemplateView):
-    template_name = 'exams/take_exam.html'
+    template_name = "exams/take_exam.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if request.user.is_staff:
+            return HttpResponseForbidden("Teacher accounts cannot take student exams.")
+        self.exam = get_object_or_404(Exam, pk=kwargs["pk"])
+        return super().dispatch(request, *args, **kwargs)
+
+    def _get_or_start_attempt(self):
+        try:
+            attempt, _ = ExamAttempt.objects.get_or_create(user=self.request.user, exam=self.exam)
+        except IntegrityError:
+            attempt = ExamAttempt.objects.get(user=self.request.user, exam=self.exam)
+        return attempt
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        exam = get_object_or_404(Exam, pk=self.kwargs['pk'])
-        
-        # Security: Check if the student already took this exam
-        if ExamAttempt.objects.filter(user=self.request.user, exam=exam).exists():
-            context['already_taken'] = True
+        attempt = self._get_or_start_attempt()
+        if attempt.is_completed:
+            context["already_taken"] = True
+            context["attempt"] = attempt
             return context
-            
-        context['exam'] = exam
-        # Optimize query: prefetch choices so we don't hit the DB for every question
-        context['questions'] = exam.questions.prefetch_related('choices').all()
+        remaining = max(0, int((attempt.deadline - timezone.now()).total_seconds()))
+        if remaining == 0:
+            attempt.completed_at = timezone.now()
+            attempt.total_points = sum(self.exam.questions.values_list("points", flat=True))
+            attempt.save(update_fields=["completed_at", "total_points"])
+            context["already_taken"] = True
+            context["attempt"] = attempt
+            context["expired"] = True
+            return context
+        context["exam"] = self.exam
+        context["attempt"] = attempt
+        context["remaining_seconds"] = remaining
+        context["questions"] = self.exam.questions.prefetch_related("choices").all()
         return context
 
     def post(self, request, *args, **kwargs):
-        exam = get_object_or_404(Exam, pk=self.kwargs['pk'])
-        
-        if ExamAttempt.objects.filter(user=request.user, exam=exam).exists():
-            return redirect('dashboard')
+        with transaction.atomic():
+            attempt = get_object_or_404(
+                ExamAttempt.objects.select_for_update(), user=request.user, exam=self.exam
+            )
+            if attempt.is_completed:
+                return redirect("exam_result", pk=attempt.pk)
+            if timezone.now() >= attempt.deadline:
+                attempt.total_points = sum(self.exam.questions.values_list("points", flat=True))
+                attempt.completed_at = timezone.now()
+                attempt.save(update_fields=["total_points", "completed_at"])
+                messages.error(request, "The exam time has expired. Late answers were not accepted.")
+                return redirect("exam_result", pk=attempt.pk)
 
-        score = 0
-        total_points = 0
-        attempt = ExamAttempt.objects.create(user=request.user, exam=exam)
-        
-        questions = exam.questions.all()
-        for q in questions:
-            total_points += q.points
-            choice_id = request.POST.get(f'question_{q.id}')
-            
-            if choice_id:
-                try:
-                    choice = Choice.objects.get(id=choice_id, question=q)
-                    # Record the student's answer
-                    StudentAnswer.objects.create(attempt=attempt, question=q, choice=choice)
-                    
-                    # Calculate score
-                    if choice.is_correct:
-                        score += q.points
-                except Choice.DoesNotExist:
-                    pass # Invalid choice submitted
+            questions = list(self.exam.questions.all())
+            score = 0
+            total_points = sum(question.points for question in questions)
+            for question in questions:
+                choice_id = request.POST.get(f"question_{question.pk}")
+                if not choice_id:
+                    continue
+                choice = Choice.objects.filter(pk=choice_id, question=question).first()
+                if choice is None:
+                    continue
+                answer, _ = StudentAnswer.objects.get_or_create(
+                    attempt=attempt,
+                    question=question,
+                    defaults={"choice": choice},
+                )
+                if answer.choice.is_correct:
+                    score += question.points
 
-        # Save final score
-        attempt.score = score
-        attempt.total_points = total_points
-        attempt.save()
+            attempt.score = score
+            attempt.total_points = total_points
+            attempt.completed_at = timezone.now()
+            attempt.save(update_fields=["score", "total_points", "completed_at"])
+        return redirect("exam_result", pk=attempt.pk)
 
-        return redirect('exam_result', pk=attempt.pk)
-
-# ============ STUDENT: VIEW RESULT ============
 
 class ExamResultView(LoginRequiredMixin, TemplateView):
-    template_name = 'exams/exam_result.html'
+    template_name = "exams/exam_result.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        attempt = get_object_or_404(ExamAttempt, pk=self.kwargs['pk'], user=self.request.user)
-        context['attempt'] = attempt
-        # Calculate percentage
-        if attempt.total_points > 0:
-            context['percentage'] = round((attempt.score / attempt.total_points) * 100, 1)
-        else:
-            context['percentage'] = 0
+        attempt = get_object_or_404(ExamAttempt, pk=self.kwargs["pk"], user=self.request.user)
+        context["attempt"] = attempt
+        context["percentage"] = round((attempt.score / attempt.total_points) * 100, 1) if attempt.total_points else 0
         return context
 
 
 class ExamReportView(TeacherRequiredMixin, TemplateView):
-    template_name = 'exams/exam_report.html'
+    template_name = "exams/exam_report.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        exam = get_object_or_404(Exam, pk=self.kwargs['pk'], created_by=self.request.user)
-        
-        # Fetch all attempts for this exam
-        attempts = ExamAttempt.objects.filter(exam=exam).select_related('user').order_by('-completed_at')
-        
-        # Calculate average score percentage using Python (since total_points can vary per attempt, but usually it's the same)
-        total_percentage = 0
-        for attempt in attempts:
-            if attempt.total_points > 0:
-                total_percentage += (attempt.score / attempt.total_points) * 100
-        
-        avg_score = round(total_percentage / attempts.count(), 1) if attempts.exists() else 0
-
-        context['exam'] = exam
-        context['attempts'] = attempts
-        context['avg_score'] = avg_score
+        exam = get_object_or_404(Exam, pk=self.kwargs["pk"], created_by=self.request.user)
+        attempts = ExamAttempt.objects.filter(exam=exam, completed_at__isnull=False).select_related("user").order_by("-completed_at")
+        percentages = [attempt.score / attempt.total_points * 100 for attempt in attempts if attempt.total_points]
+        context.update({"exam": exam, "attempts": attempts, "avg_score": round(sum(percentages) / len(percentages), 1) if percentages else 0})
         return context

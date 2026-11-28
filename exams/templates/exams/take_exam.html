@@ -1,51 +1,71 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="max-w-3xl mx-auto">
-    <!-- Header -->
-    <div class="bg-indigo-600 rounded-2xl p-8 text-white shadow-md mb-8">
-        <h1 class="text-3xl font-bold mb-2">{{ exam.title }}</h1>
-        <div class="flex gap-6 text-indigo-100 text-sm font-medium">
-            <span class="flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> {{ exam.duration_minutes }} Minutes</span>
-            <span class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4"></i> {{ questions.count }} Questions</span>
-        </div>
-    </div>
-
     {% if already_taken %}
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-                <i data-lucide="alert-circle" class="w-8 h-8 text-red-600"></i>
-            </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">You have already taken this exam.</h3>
-            <p class="text-gray-500 mb-6">You cannot retake an exam.</p>
-            <a href="{% url 'dashboard' %}" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition">Back to Dashboard</a>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% if expired %}Your exam time has expired.{% else %}You have already submitted this exam.{% endif %}</h3>
+            <p class="text-gray-500 mb-6">This exam attempt cannot be restarted.</p>
+            {% if attempt.completed_at %}<a href="{% url 'exam_result' attempt.pk %}" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium">View result</a>{% endif %}
+            <a href="{% url 'dashboard' %}" class="ml-2 text-indigo-600">Back to Dashboard</a>
         </div>
     {% else %}
-        <form method="POST" class="space-y-6">
+        <div class="bg-indigo-600 rounded-2xl p-8 text-white shadow-md mb-8">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">{{ exam.title }}</h1>
+                    <p class="text-indigo-100 text-sm">{{ exam.duration_minutes }} minutes · {{ questions.count }} questions</p>
+                </div>
+                <div class="rounded-xl bg-white/15 px-4 py-3 text-center" role="timer" aria-live="off">
+                    <span class="block text-xs uppercase tracking-wide text-indigo-100">Time remaining</span>
+                    <strong id="exam-countdown" class="text-2xl font-bold tabular-nums">--:--</strong>
+                </div>
+            </div>
+        </div>
+        <form id="exam-form" method="POST" class="space-y-6">
             {% csrf_token %}
             {% for q in questions %}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                        {{ forloop.counter }}. {{ q.text }} 
-                        <span class="text-sm font-normal text-gray-400 ml-2">({{ q.points }} pts)</span>
-                    </h4>
-                    
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">{{ forloop.counter }}. {{ q.text }} <span class="text-sm font-normal text-gray-400">({{ q.points }} pts)</span></h4>
                     <div class="space-y-3">
                         {% for choice in q.choices.all %}
-                            <label class="flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 transition">
+                            <label class="flex items-center p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
                                 <input type="radio" name="question_{{ q.id }}" value="{{ choice.id }}" required class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
                                 <span class="ml-3 text-gray-700">{{ choice.text }}</span>
                             </label>
+                        {% empty %}
+                            <p class="text-sm text-red-600">This question has no available choices.</p>
                         {% endfor %}
                     </div>
                 </div>
             {% endfor %}
-            
             <div class="flex justify-end pt-4 pb-12">
-                <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition shadow-md">
-                    Submit Exam
-                </button>
+                <button id="submit-exam" type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700">Submit Exam</button>
             </div>
         </form>
+        <script>
+            (() => {
+                let remaining = Number("{{ remaining_seconds }}");
+                const display = document.getElementById("exam-countdown");
+                const form = document.getElementById("exam-form");
+                const button = document.getElementById("submit-exam");
+                const render = () => {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    display.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+                };
+                render();
+                const timer = window.setInterval(() => {
+                    remaining = Math.max(0, remaining - 1);
+                    render();
+                    if (remaining === 0) {
+                        window.clearInterval(timer);
+                        button.disabled = true;
+                        button.textContent = "Time expired — submitting";
+                        form.submit();
+                    }
+                }, 1000);
+            })();
+        </script>
     {% endif %}
 </div>
 {% endblock %}
